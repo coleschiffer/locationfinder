@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>T map</title>
+      <style type="text/css">
+        .loader {
+        border: 16px solid #f3f3f3; /* Light grey */
+        border-top: 16px solid #3498db; /* Blue */
+        border-radius: 50%;
+        width: 120px;
+        height: 120px;
+        animation: spin 2s linear infinite;
+         }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hide-loader{
+        display:none;
+        }
+     </style>
+  </head>
+  <body>
+    <div class="imgs" id="imgs">
+
+    </div>
+    <script type="text/javascript">
+    //global variables
+    var data;
+
+    //   for cors problems  fetch('https://cors.io/spreadsheets.google.com/feeds/list/1jKZWs-kw81AtlkHz-AjCyfyx9EsDY1EmMaY1Sgm4SKs/1/public/values?alt=json')
+    //fetching json
+    fetch('https://spreadsheets.google.com/feeds/list/1jKZWs-kw81AtlkHz-AjCyfyx9EsDY1EmMaY1Sgm4SKs/1/public/values?alt=json')
+      .then(function(response) {
+        return response.json();
+      })
+      .then(function(myJson) {
+        data = myJson.feed.entry;
+        images(data[0].gsx$imageone.$t,data[0].gsx$imagetwo.$t,data[0].gsx$imagethree.$t,data[0].gsx$banner.$t);
+      });
+
+
+    function images(one,two,three,banner) {
+      var imgs = document.getElementById('imgs');
+      var listing = imgs.appendChild(document.createElement('div'));
+      var band = imgs.appendChild(document.createElement('div'));
+      listing.className = 'promo';
+      listing.id = "promo";
+      var imageone = listing.appendChild(document.createElement('img'));
+      imageone.id = "image1";
+      imageone.className = "subimage";
+      console.log(one);
+
+      imageone.src = one;            // image.src = "IMAGE URL/PATH"
+
+      var imagetwo = document.createElement("img");
+      imagetwo.id = "image2";
+      imagetwo.className = "subimage";
+      imagetwo.src = two;            // image.src = "IMAGE URL/PATH"
+      listing.appendChild(imagetwo);
+
+      var imagethree = document.createElement("img");
+      imagethree.id = "image3";
+      imagethree.className = "subimage";
+      imagethree.src = three;            // image.src = "IMAGE URL/PATH"
+      listing.appendChild(imagethree);
+
+      var band = imgs.appendChild(document.createElement('div'));
+      band.className = 'bimo';
+      band.id = "bimo";
+      var ban = document.createElement("img");
+      ban.id = "banner";
+      ban.className = "headimg";
+      ban.src = banner;            // image.src = "IMAGE URL/PATH"
+      band.appendChild(ban);
+    }
+
+
+    function store(address, city, number, distance, latitude, longitude, close, open) {
+      this.address = address;
+      this.city = city;
+      this.number = number;
+      this.distance = distance;
+      this.latitude = latitude;
+      this.longitude = longitude;
+      this.close = close;
+      this.open = open;
+    }
+    function distance(lat1, lon1, lat2, lon2, unit) {
+      var radlat1 = Math.PI * lat1/180
+      var radlat2 = Math.PI * lat2/180
+      var theta = lon1-lon2
+      var radtheta = Math.PI * theta/180
+      var dist = Math.sin(radlat1) * Math.sin(radlat2) + Math.cos(radlat1) * Math.cos(radlat2) * Math.cos(radtheta);
+      if (dist > 1) {
+        dist = 1;
+      }
+      dist = Math.acos(dist)
+      dist = dist * 180/Math.PI
+      dist = dist * 60 * 1.1515
+      if (unit=="K") {
+        dist = dist * 1.609344
+      }
+      if (unit=="N") {
+        dist = dist * 0.8684
+      }
+      return dist
+    }
+    function time(close, open) {
+      var now = new Date();
+      var hour = now.getHours();
+      if(10<=hour&&hour<close){
+          return("Open until " + (close-12) + ":00 pm today.")
+      }
+      else {
+        return("We are closed right now, we open again at " + open + ":00 am")
+      }
+    }
+
+    </script>
+  </body>
+</html>
