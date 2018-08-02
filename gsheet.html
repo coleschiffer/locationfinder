@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>T map</title>
+      <style type="text/css">
+        .loader {
+        border: 16px solid #f3f3f3; /* Light grey */
+        border-top: 16px solid #3498db; /* Blue */
+        border-radius: 50%;
+        width: 120px;
+        height: 120px;
+        animation: spin 2s linear infinite;
+         }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hide-loader{
+        display:none;
+        }
+        .lyft {
+          color: #ff00bf;
+        }
+     </style>
+  </head>
+  <body>
+    <div class='sidebar'>
+      <div class='heading'>
+        <h1>Our locations</h1>
+      </div>
+      <div id='listings' class='listings'>
+        <center>
+          <div class="loader" id="loader">
+          </div>
+        </center>
+      </div>
+      <div class="lyft">
+
+      </div>
+
+    </div>
+    <script type="text/javascript">
+
+    //global variables
+    var stores;
+
+    //   for cors problems  fetch('https://cors.io/spreadsheets.google.com/feeds/list/1jKZWs-kw81AtlkHz-AjCyfyx9EsDY1EmMaY1Sgm4SKs/1/public/values?alt=json')
+    //fetching json
+    fetch('http://spreadsheets.google.com/feeds/list/1jKZWs-kw81AtlkHz-AjCyfyx9EsDY1EmMaY1Sgm4SKs/1/public/values?alt=json')
+      .then(function(response) {
+        return response.json();
+      })
+      .then(function(myJson) {
+        stores = myJson.feed.entry;
+      });
+    // current location atemptempt
+    navigator.geolocation.getCurrentPosition(success, error);
+    // error
+    function error(err) {
+      console.warn(`ERROR(${err.code}): ${err.message}`);
+      buildLocationList(stores);
+    }
+    //located
+    function success(pos) {
+      crd = pos.coords;
+      located = true;
+      buildLocationList(stores);
+    }
+
+    function store(address, city, number, distance, latitude, longitude, close, open) {
+      this.address = address;
+      this.city = city;
+      this.number = number;
+      this.distance = distance;
+      this.latitude = latitude;
+      this.longitude = longitude;
+      this.close = close;
+      this.open = open;
+    }
+    function distance(lat1, lon1, lat2, lon2, unit) {
+      var radlat1 = Math.PI * lat1/180
+      var radlat2 = Math.PI * lat2/180
+      var theta = lon1-lon2
+      var radtheta = Math.PI * theta/180
+      var dist = Math.sin(radlat1) * Math.sin(radlat2) + Math.cos(radlat1) * Math.cos(radlat2) * Math.cos(radtheta);
+      if (dist > 1) {
+        dist = 1;
+      }
+      dist = Math.acos(dist)
+      dist = dist * 180/Math.PI
+      dist = dist * 60 * 1.1515
+      if (unit=="K") {
+        dist = dist * 1.609344
+      }
+      if (unit=="N") {
+        dist = dist * 0.8684
+      }
+      return dist
+    }
+    function time(close, open) {
+      var now = new Date();
+      var hour = now.getHours();
+      if(10<=hour&&hour<close){
+          return("Open until " + (close-12) + ":00 pm today.")
+      }
+      else {
+        return("We are closed right now, we open again at " + open + ":00 am")
+      }
+    }
+    function buildLocationList(data) {
+      if(located) {
+        var array = [];
+        for (i = 0; i < data.length; i++) {
+          var current = data[i];
+          var shop = new store(current.gsx$street.$t, current.gsx$city.$t,current.gsx$phone.$t,Math.round(100*distance(crd.latitude, crd.longitude, current.gsx$latitude.$t,current.gsx$longitude.$t))/100,current.gsx$latitude.$t,current.gsx$longitude.$t,current.gsx$close.$t,current.gsx$open.$t);
+          array.push(shop);
+         }
+         while(array.length!=0) {
+            var min = 0;
+            for (var i = 0; i < array.length; i++) {
+              if(array[i].distance<array[min].distance)
+                min = i;
+              }
+            var listings = document.getElementById('listings');
+            var listing = listings.appendChild(document.createElement('div'));
+            listing.className = 'item';
+            listing.id = "listing-" + i;
+            var link = listing.appendChild(document.createElement('a'));
+            link.href = '#';
+            link.className = 'title';
+            link.dataPosition = i;
+            link.innerHTML = array[min].address;
+
+            var lyft = listing.appendChild(document.createElement('a'));
+            lyft.href = "https://lyft.com/ride?id=lyft&pickup%5Blatitude%5D=" + crd.latitude + "&pickup%5Blongitude%5D=" + crd.longitude + "&destination%5Blatitude%5D=" + array[min].latitude + "&destination%5Blongitude%5D=" + array[min].longitude + "&partner=juj7oOeqKCB0";
+            lyft.className = 'lyft';
+            lyft.dataPosition = i;
+            lyft.innerHTML = "<br>Request a Lyft<br>";
+
+
+            var uber = listing.appendChild(document.createElement('a'));
+            uber.href = "https://m.uber.com/ul/?action=setPickup&client_id=JagVW0j5TH58yeWyTJg9JKf55JoEGRBp&pickup=my_location&dropoff[latitude]=" + array[min].latitude + "&dropoff[longitude]=" + array[min].longitude;
+            uber.className = 'uber';
+            uber.dataPosition = i;
+            uber.innerHTML = "Request a Uber<br>";
+
+            var dir = listing.appendChild(document.createElement('a'));
+            dir.href = "https://www.google.com/maps/dir/?api=1&origin=" + crd.latitude + "," + crd.longitude + "&destination=" + array[min].latitude + "," + array[min].longitude + "&travelmode=driving";
+            dir.dataPosition = i;
+            dir.innerHTML = "Directions";
+
+            var details = listing.appendChild(document.createElement('div'));
+            details.innerHTML = array[min].city;
+            if (array[min].number) {
+              details.innerHTML += ' &middot; ' + array[min].number;
+            }
+            var timing = listing.appendChild(document.createElement('div'));
+            timing.innerHTML = time(array[min].close,array[min].open);
+            var coordinates = listing.appendChild(document.createElement('div'));
+            coordinates.innerHTML = "You are only " + array[min].distance + " miles away<hr>";
+            array.splice(min, 1)
+        }
+      }
+      else{
+        for (i = 0; i < data.length; i++) {
+          var current = data[i];
+          var listings = document.getElementById('listings');
+          var listing = listings.appendChild(document.createElement('div'));
+          listing.className = 'item';
+          listing.id = "listing-" + i;
+          var link = listing.appendChild(document.createElement('a'));
+          link.href = '#';
+          link.className = 'title';
+          link.dataPosition = i;
+          link.innerHTML = current.gsx$street.$t;
+          var details = listing.appendChild(document.createElement('div'));
+          details.innerHTML = current.gsx$city.$t;
+          if (current.gsx$phone.$t) {
+            details.innerHTML += ' &middot; ' + current.gsx$phone.$t;
+          }
+          var timing = listing.appendChild(document.createElement('div'));
+          timing.innerHTML = time(current.gsx$close.$t,current.gsx$open.$t);
+       }
+      }
+      var element = document.getElementById("loader");
+      element.classList.add("hide-loader");
+    }
+    </script>
+  </body>
+</html>
